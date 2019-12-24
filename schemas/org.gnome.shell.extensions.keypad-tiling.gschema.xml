@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gsettings-desktop-schemas">
+  <schema path="/org/gnome/shell/extensions/keypad-tiling/" id="org.gnome.shell.extensions.keypad-tiling">
+    <key type="b" name="disable-animations">
+      <default>false</default>
+      <summary>Disable animations during tiling</summary>
+      <description></description>
+    </key>
+    <key type="b" name="center-when-unmaximizing">
+      <default>false</default>
+      <summary>Move window to center of screen when unmaximizing</summary>
+      <description></description>
+    </key>
+    <key type="as" name="kpdivide">
+      <default>["&lt;Super&gt;KP_Divide"]</default>
+      <summary>Maximize window</summary>
+      <description></description>
+    </key>
+    <key type="as" name="kp0">
+      <default>["&lt;Super&gt;KP_0"]</default>
+      <summary>Minimize window</summary>
+      <description></description>
+    </key>
+    <key type="as" name="kp1">
+      <default>["&lt;Super&gt;KP_1"]</default>
+      <summary>Move window to bottom left corner</summary>
+      <description></description>
+    </key>
+    <key type="as" name="kp2">
+      <default>["&lt;Super&gt;KP_2"]</default>
+      <summary>Move window to bottom edge of screen</summary>
+      <description></description>
+    </key>
+    <key type="as" name="kp3">
+      <default>["&lt;Super&gt;KP_3"]</default>
+      <summary>Move window to bottom right corner</summary>
+      <description></description>
+    </key>
+    <key type="as" name="kp4">
+      <default>["&lt;Super&gt;KP_4"]</default>
+      <summary>Move window to left side of screen</summary>
+      <description></description>
+    </key>
+    <key type="as" name="kp5">
+      <default>["&lt;Super&gt;KP_5"]</default>
+      <summary>Toggle maximization state</summary>
+      <description></description>
+    </key>
+    <key type="as" name="kp6">
+      <default>["&lt;Super&gt;KP_6"]</default>
+      <summary>Move window to right side of screen</summary>
+      <description></description>
+    </key>
+    <key type="as" name="kp7">
+      <default>["&lt;Super&gt;KP_7"]</default>
+      <summary>Move window to top left corner</summary>
+      <description></description>
+    </key>
+    <key type="as" name="kp8">
+      <default>["&lt;Super&gt;KP_8"]</default>
+      <summary>Move window to top edge of screen</summary>
+      <description></description>
+    </key>
+    <key type="as" name="kp9">
+      <default>["&lt;Super&gt;KP_9"]</default>
+      <summary>Move window to top right corner</summary>
+      <description></description>
+    </key>
+    <key type="as" name="popup-kp1">
+      <default>["&lt;Super&gt;&lt;Alt&gt;KP_1"]</default>
+      <summary>Move window to bottom left corner</summary>
+      <description></description>
+    </key>
+    <key type="as" name="popup-kp2">
+      <default>["&lt;Super&gt;&lt;Alt&gt;KP_2"]</default>
+      <summary>Move window to bottom edge of screen</summary>
+      <description></description>
+    </key>
+    <key type="as" name="popup-kp3">
+      <default>["&lt;Super&gt;&lt;Alt&gt;KP_3"]</default>
+      <summary>Move window to bottom right corner</summary>
+      <description></description>
+    </key>
+    <key type="as" name="popup-kp4">
+      <default>["&lt;Super&gt;&lt;Alt&gt;KP_4"]</default>
+      <summary>Move window to left side of screen</summary>
+      <description></description>
+    </key>
+    <key type="as" name="popup-kp6">
+      <default>["&lt;Super&gt;&lt;Alt&gt;KP_6"]</default>
+      <summary>Move window to right side of screen</summary>
+      <description></description>
+    </key>
+    <key type="as" name="popup-kp7">
+      <default>["&lt;Super&gt;&lt;Alt&gt;KP_7"]</default>
+      <summary>Move window to top left corner</summary>
+      <description></description>
+    </key>
+    <key type="as" name="popup-kp8">
+      <default>["&lt;Super&gt;&lt;Alt&gt;KP_8"]</default>
+      <summary>Move window to top edge of screen</summary>
+      <description></description>
+    </key>
+    <key type="as" name="popup-kp9">
+      <default>["&lt;Super&gt;&lt;Alt&gt;KP_9"]</default>
+      <summary>Move window to top right corner</summary>
+      <description></description>
+    </key>
+  </schema>
+</schemalist>

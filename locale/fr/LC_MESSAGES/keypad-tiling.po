@@ -1,0 +1,57 @@
+# <language> translations for Draw On Your Screen.
+# Copyright (C) 2019 Listed translators
+#
+# This file is distributed under the same license as Keypad Tiling.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Keypad Tiling VERSION\n"
+"Report-Msgid-Bugs-To: https://framagit.org/abakkk/KeypadTiling/issues\n"
+"POT-Creation-Date: 2019-12-21 00:00+0100\n"
+"PO-Revision-Date: 2019-12-21 00:00+0100\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Translators"
+msgstr "<a href=\"https://framagit.org/abakkk\">Abakkk</a>"
+
+#: prefs.js
+
+msgid "Preferences"
+msgstr "Préférences"
+
+msgid "About"
+msgstr "À propos"
+
+# About page
+
+# you are free to translate the extension name
+#msgid "Keypad Tiling"
+#msgstr ""
+
+msgid "Version %d"
+msgstr "Version %d"
+
+msgid "Tile windows with your keypad"
+msgstr "Pave les fenêtres avec ton pavé numérique"
+
+# Prefs page
+
+msgid "Disable animations during tiling"
+msgstr "Désactiver les animations pendant le pavage"
+
+msgid "Move window to center of screen when unmaximizing"
+msgstr "Déplacer la fenêtre au centre de l'écran lorsqu'elle est restaurée"
+
+msgid "Tiling"
+msgstr "Pavage"
+
+msgid "Tiling with window completion"
+msgstr "Pavage avec complétion de fenêtre"
+
+
