@@ -22,6 +22,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
+const GLib = imports.gi.GLib;
 const GObject = imports.gi.GObject;
 const Meta = imports.gi.Meta;
 const Shell = imports.gi.Shell;
@@ -36,6 +37,7 @@ const Convenience = ExtensionUtils.getSettings ? ExtensionUtils : ExtensionUtils
 // information: Meta.MaximizeFlags = { HORIZONTAL: 1, VERTICAL: 2, BOTH: 3 }
 
 const SWITCHER_NO_MODS_TIMEOUT = 4500;
+const WINDOW_OPERATION_TIMEOUT = 50;
 const KEYBINDINGS = {
     'kpdivide': function() { kp(_kpdivide); },
     'kp0': function() { kp(_kp0); },
@@ -58,13 +60,14 @@ const KEYBINDINGS = {
     'popup-kp9': function() { popupKp(_kp9, _kp3); }
 };
 
-let settings, interfaceSettings, animationSettingIsChanged, animationSettingWasDefault;
+let settings, interfaceSettings, animationSettingIsChanged, animationSettingWasDefault, isWaylandCompositor;
 
 function init() {
     
 }
 
 function enable() {
+    isWaylandCompositor = Meta.is_wayland_compositor();
     settings = Convenience.getSettings();
     interfaceSettings = Convenience.getSettings('org.gnome.desktop.interface');
     
@@ -92,7 +95,7 @@ function kp(kpFunction) {
     if (window && window.resizeable) {
         disableAnimations();
         kpFunction(window);
-        enableAnimations();
+        addTimeout(3, () => enableAnimations());
     }
 }
 
@@ -139,6 +142,17 @@ function enableAnimations() {
     animationSettingWasDefault = undefined;
 }
 
+function addTimeout(i, callback) {
+    // Wayland needs a delay between each operation (move or resize) on windows :/
+    if (isWaylandCompositor)
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, i * WINDOW_OPERATION_TIMEOUT, () => {
+            callback();
+            return GLib.SOURCE_REMOVE;
+        });
+    else
+        callback();
+}
+
 function getIsTiled(curRect, maxRect) {
     let tiledXValues = [maxRect.x, maxRect.x + Math.floor(maxRect.width/2), maxRect.x + Math.ceil(maxRect.width/2)];
     let tiledYValues = [maxRect.y, maxRect.y + Math.floor(maxRect.height/2), maxRect.y + Math.ceil(maxRect.height/2)];
@@ -179,54 +193,70 @@ function _kp0(window) {
 }
 
 function _kp1(window) {
+    let i = 0;
     let curRect = window.get_frame_rect();
     let maxRect = window.get_work_area_current_monitor();
     saveRect(window, curRect, maxRect);
     
     let maximizedFlag = (window.maximized_horizontally | 0) | 2*(window.maximized_vertically | 0);
-    if (maximizedFlag)
+    if (maximizedFlag) {
         window.unmaximize(maximizedFlag);
+        i++;
+    }
     
-    window.move_resize_frame(true, maxRect.x, maxRect.y + maxRect.height/2, maxRect.width/2, maxRect.height/2);
+    addTimeout(i, () => window.move_resize_frame(true, maxRect.x, maxRect.y + maxRect.height/2, maxRect.width/2, maxRect.height/2));
 }
 
 function _kp2(window) {
+    let i = 0;
     let curRect = window.get_frame_rect();
     let maxRect = window.get_work_area_current_monitor();
     saveRect(window, curRect, maxRect);
     
-    if (window.maximized_vertically)
+    if (window.maximized_vertically) {
         window.unmaximize(Meta.MaximizeFlags.VERTICAL);
+        i++;
+    }
     
-    window.move_resize_frame(true, curRect.x, maxRect.y + maxRect.height/2, curRect.width, maxRect.height/2);
-    window.maximize(Meta.MaximizeFlags.HORIZONTAL);
+    addTimeout(i, () => window.move_resize_frame(true, curRect.x, maxRect.y + maxRect.height/2, curRect.width, maxRect.height/2));
+    i++;
+    
+    addTimeout(i, () => window.maximize(Meta.MaximizeFlags.HORIZONTAL));
 }
 
 function _kp3(window) {
+    let i = 0;
     let curRect = window.get_frame_rect();
     let maxRect = window.get_work_area_current_monitor();
     saveRect(window, curRect, maxRect);
     
     let maximizedFlag = (window.maximized_horizontally | 0) | 2*(window.maximized_vertically | 0);
-    if (maximizedFlag)
+    if (maximizedFlag) {
         window.unmaximize(maximizedFlag);
+        i++;
+    }
     
-    window.move_resize_frame(true, maxRect.x + maxRect.width/2, maxRect.y + maxRect.height/2, maxRect.width/2, maxRect.height/2);
+    addTimeout(i, () => window.move_resize_frame(true, maxRect.x + maxRect.width/2, maxRect.y + maxRect.height/2, maxRect.width/2, maxRect.height/2));
 }
 
 function _kp4(window) {
+    let i = 0;
     let curRect = window.get_frame_rect();
     let maxRect = window.get_work_area_current_monitor();
     saveRect(window, curRect, maxRect);
     
-    if (window.maximized_horizontally)
+    if (window.maximized_horizontally) {
         window.unmaximize(Meta.MaximizeFlags.HORIZONTAL);
+        i++;
+    }
     
-    window.move_resize_frame(true, maxRect.x, curRect.y, maxRect.width/2, curRect.height);
-    window.maximize(Meta.MaximizeFlags.VERTICAL);
+    addTimeout(i, () => window.move_resize_frame(true, maxRect.x, curRect.y, maxRect.width/2, curRect.height));
+    i++;
+    addTimeout(i, () => window.maximize(Meta.MaximizeFlags.VERTICAL));
 }
 
 function _kp5(window) {
+    let i = 0;
     let maximizedFlag = (window.maximized_horizontally | 0) | 2*(window.maximized_vertically | 0);
     let curRect = window.get_frame_rect();
     let maxRect = window.get_work_area_current_monitor();
@@ -237,73 +267,96 @@ function _kp5(window) {
         return;
     }
     
-    if (maximizedFlag)
+    if (maximizedFlag) {
         window.unmaximize(maximizedFlag);
+        i++;
+    }
     
     if (isTiled && window.nonTiledRect) {
-        let oldRect = window.nonTiledRect;
-        window.move_resize_frame(true, oldRect.x, oldRect.y, oldRect.width, oldRect.height);
-        delete window.nonTiledRect;
+        addTimeout(i, () => {
+            let oldRect = window.nonTiledRect;
+            window.move_resize_frame(true, oldRect.x, oldRect.y, oldRect.width, oldRect.height);
+            delete window.nonTiledRect;
+        });
+        i++;
     }
     
     if (settings.get_boolean('center-when-unmaximizing')) {
-        curRect = window.get_frame_rect();
-        window.move_frame(true, (maxRect.width - curRect.width)/2, (maxRect.height - curRect.height)/2);
+        addTimeout(i, () => {
+            curRect = window.get_frame_rect();
+            window.move_frame(true, (maxRect.width - curRect.width)/2, (maxRect.height - curRect.height)/2);
+        });
     }
 }
 
 function _kp6(window) {
+    let i = 0;
     let curRect = window.get_frame_rect();
     let maxRect = window.get_work_area_current_monitor();
     saveRect(window, curRect, maxRect);
     
-    if (window.maximized_horizontally)
+    if (window.maximized_horizontally) {
         window.unmaximize(Meta.MaximizeFlags.HORIZONTAL);
+        i++;
+    }
     
-    window.move_resize_frame(true, maxRect.x + maxRect.width/2, curRect.y, maxRect.width/2, curRect.height);
-    window.maximize(Meta.MaximizeFlags.VERTICAL);
+    addTimeout(i, () => window.move_resize_frame(true, maxRect.x + maxRect.width/2, curRect.y, maxRect.width/2, curRect.height));
+    i++;
+    
+    addTimeout(i, () => window.maximize(Meta.MaximizeFlags.VERTICAL));
 }
 
 function _kp7(window) {
+    let i = 0;
     let curRect = window.get_frame_rect();
     let maxRect = window.get_work_area_current_monitor();
     saveRect(window, curRect, maxRect);
     
     let maximizedFlag = (window.maximized_horizontally | 0) | 2*(window.maximized_vertically | 0);
-    if (maximizedFlag)
+    if (maximizedFlag) {
         window.unmaximize(maximizedFlag);
+        i++;
+    }
     
-    window.move_resize_frame(true, maxRect.x, maxRect.y, maxRect.width/2, maxRect.height/2);
+    addTimeout(i, () => window.move_resize_frame(true, maxRect.x, maxRect.y, maxRect.width/2, maxRect.height/2));
 }
 
 function _kp8(window) {
+    let i = 0;
     let curRect = window.get_frame_rect();
     let maxRect = window.get_work_area_current_monitor();
     saveRect(window, curRect, maxRect);
     
-    if (window.maximized_vertically)
+    if (window.maximized_vertically) {
         window.unmaximize(Meta.MaximizeFlags.VERTICAL);
+        i++;
+    }
     
-    window.move_resize_frame(true, curRect.x, maxRect.y, curRect.width, maxRect.height/2);
-    window.maximize(Meta.MaximizeFlags.HORIZONTAL);
+    addTimeout(i, () => window.move_resize_frame(true, curRect.x, maxRect.y, curRect.width, maxRect.height/2));
+    i++;
+    
+    addTimeout(i, () => window.maximize(Meta.MaximizeFlags.HORIZONTAL));
 }
 
 function _kp9(window) {
+    let i = 0;
     let curRect = window.get_frame_rect();
     let maxRect = window.get_work_area_current_monitor();
     saveRect(window, curRect, maxRect);
     
     let maximizedFlag = (window.maximized_horizontally | 0) | 2*(window.maximized_vertically | 0);
-    if (maximizedFlag)
+    if (maximizedFlag) {
         window.unmaximize(maximizedFlag);
+        i++;
+    }
     
-    window.move_resize_frame(true, maxRect.x + maxRect.width/2, maxRect.y, maxRect.width/2, maxRect.height/2);
+    addTimeout(i, () => window.move_resize_frame(true, maxRect.x + maxRect.width/2, maxRect.y, maxRect.width/2, maxRect.height/2));
 }
 
 var KeypadTillingWindowSwitcherPopup = class KeypadTillingWindowSwitcherPopup extends AltTab.WindowSwitcherPopup {
     _init(firstWindow, firstCallback, secondCallback) {
         this._saveWindow(firstWindow);
-        firstCallback(firstWindow);
+        addTimeout(2, () => firstCallback(firstWindow));
         
         this._firstWindow = firstWindow;
         this._callback = secondCallback;
@@ -318,8 +371,8 @@ var KeypadTillingWindowSwitcherPopup = class KeypadTillingWindowSwitcherPopup ex
         let windows = AltTab.getWindows(workspace).filter(window => window != this._firstWindow && window.resizeable);
         
         windows.forEach(window => {
-            this._saveWindow(window);
-            this._callback(window);
+            addTimeout(1, () => this._saveWindow(window));
+            addTimeout(3, () => this._callback(window));
         });
         
         return windows;
@@ -349,11 +402,19 @@ var KeypadTillingWindowSwitcherPopup = class KeypadTillingWindowSwitcherPopup ex
             return;
         
         window.unmaximize(Meta.MaximizeFlags.BOTH);
-        window.move_resize_frame(true, window.rectOld.x, window.rectOld.y, window.rectOld.width, window.rectOld.height);
+        
+        addTimeout(1, () => {
+            window.move_resize_frame(true, window.rectOld.x, window.rectOld.y, window.rectOld.width, window.rectOld.height);
+            delete window.rectOld;
+        });
+        
         if (window.maximizedFlagOld)
-            window.maximize(window.maximizedFlagOld);
-        delete window.rectOld;
-        delete window.maximizedFlagOld;
+            addTimeout(2, () => {
+                window.maximize(window.maximizedFlagOld);
+                delete window.maximizedFlagOld;
+            });
+        else
+            delete window.maximizedFlagOld;
     }
     
     _saveWindow(window) {
@@ -388,7 +449,7 @@ var KeypadTillingWindowSwitcherPopup = class KeypadTillingWindowSwitcherPopup ex
         let time = global.get_current_time();
         this._firstWindow.activate(time);
         
-        enableAnimations();
+        addTimeout(3, () => enableAnimations());
         
         super._onDestroy();
     }
