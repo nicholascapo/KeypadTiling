@@ -94,6 +94,7 @@ function kp(kpFunction) {
     let window = global.display.focus_window;
     if (window && window.resizeable) {
         disableAnimations();
+        window.move_then_resize_frame = move_then_resize_frame.bind(window);
         kpFunction(window);
         addTimeout(3, () => enableAnimations());
     }
@@ -105,11 +106,12 @@ function popupKp(firstKpFunction, secondKpFunction) {
         return;
     
     disableAnimations();
+    window.move_then_resize_frame = move_then_resize_frame.bind(window);
     
     let workspace = global.workspace_manager ? global.workspace_manager.get_active_workspace() : global.screen.get_active_workspace();
     let otherWindows = AltTab.getWindows(workspace).filter(w => w != window && w.resizeable);
     if (otherWindows.length != 0) {
-        let tabPopup = new KeypadTillingWindowSwitcherPopup(window, firstKpFunction, secondKpFunction);
+        let tabPopup = new KeypadTilingWindowSwitcherPopup(window, firstKpFunction, secondKpFunction);
         if (!tabPopup.show(false, 'switch-applications', 0))
             tabPopup.destroy();
     } else {
@@ -140,6 +142,14 @@ function enableAnimations() {
     
     animationSettingIsChanged = undefined;
     animationSettingWasDefault = undefined;
+}
+
+function move_then_resize_frame(userOp, x, y , width, height) {
+    // Decompose move_resize_frame on Wayland
+    if (isWaylandCompositor)
+        this.move_frame(userOp, x, y);
+    
+    this.move_resize_frame(userOp, x, y, width, height);
 }
 
 function addTimeout(i, callback) {
@@ -204,7 +214,7 @@ function _kp1(window) {
         i++;
     }
     
-    addTimeout(i, () => window.move_resize_frame(true, maxRect.x, maxRect.y + maxRect.height/2, maxRect.width/2, maxRect.height/2));
+    addTimeout(i, () => window.move_then_resize_frame(true, maxRect.x, maxRect.y + maxRect.height/2, maxRect.width/2, maxRect.height/2));
 }
 
 function _kp2(window) {
@@ -218,7 +228,7 @@ function _kp2(window) {
         i++;
     }
     
-    addTimeout(i, () => window.move_resize_frame(true, curRect.x, maxRect.y + maxRect.height/2, curRect.width, maxRect.height/2));
+    addTimeout(i, () => window.move_then_resize_frame(true, curRect.x, maxRect.y + maxRect.height/2, curRect.width, maxRect.height/2));
     i++;
     
     addTimeout(i, () => window.maximize(Meta.MaximizeFlags.HORIZONTAL));
@@ -236,7 +246,7 @@ function _kp3(window) {
         i++;
     }
     
-    addTimeout(i, () => window.move_resize_frame(true, maxRect.x + maxRect.width/2, maxRect.y + maxRect.height/2, maxRect.width/2, maxRect.height/2));
+    addTimeout(i, () => window.move_then_resize_frame(true, maxRect.x + maxRect.width/2, maxRect.y + maxRect.height/2, maxRect.width/2, maxRect.height/2));
 }
 
 function _kp4(window) {
@@ -250,8 +260,9 @@ function _kp4(window) {
         i++;
     }
     
-    addTimeout(i, () => window.move_resize_frame(true, maxRect.x, curRect.y, maxRect.width/2, curRect.height));
+    addTimeout(i, () => window.move_then_resize_frame(true, maxRect.x, curRect.y, maxRect.width/2, curRect.height));
     i++;
+    
     addTimeout(i, () => window.maximize(Meta.MaximizeFlags.VERTICAL));
 }
 
@@ -275,7 +286,7 @@ function _kp5(window) {
     if (isTiled && window.nonTiledRect) {
         addTimeout(i, () => {
             let oldRect = window.nonTiledRect;
-            window.move_resize_frame(true, oldRect.x, oldRect.y, oldRect.width, oldRect.height);
+            window.move_then_resize_frame(true, oldRect.x, oldRect.y, oldRect.width, oldRect.height);
             delete window.nonTiledRect;
         });
         i++;
@@ -300,7 +311,7 @@ function _kp6(window) {
         i++;
     }
     
-    addTimeout(i, () => window.move_resize_frame(true, maxRect.x + maxRect.width/2, curRect.y, maxRect.width/2, curRect.height));
+    addTimeout(i, () => window.move_then_resize_frame(true, maxRect.x + maxRect.width/2, curRect.y, maxRect.width/2, curRect.height));
     i++;
     
     addTimeout(i, () => window.maximize(Meta.MaximizeFlags.VERTICAL));
@@ -318,7 +329,7 @@ function _kp7(window) {
         i++;
     }
     
-    addTimeout(i, () => window.move_resize_frame(true, maxRect.x, maxRect.y, maxRect.width/2, maxRect.height/2));
+    addTimeout(i, () => window.move_then_resize_frame(true, maxRect.x, maxRect.y, maxRect.width/2, maxRect.height/2));
 }
 
 function _kp8(window) {
@@ -332,7 +343,7 @@ function _kp8(window) {
         i++;
     }
     
-    addTimeout(i, () => window.move_resize_frame(true, curRect.x, maxRect.y, curRect.width, maxRect.height/2));
+    addTimeout(i, () => window.move_then_resize_frame(true, curRect.x, maxRect.y, curRect.width, maxRect.height/2));
     i++;
     
     addTimeout(i, () => window.maximize(Meta.MaximizeFlags.HORIZONTAL));
@@ -350,13 +361,15 @@ function _kp9(window) {
         i++;
     }
     
-    addTimeout(i, () => window.move_resize_frame(true, maxRect.x + maxRect.width/2, maxRect.y, maxRect.width/2, maxRect.height/2));
+    addTimeout(i, () => window.move_then_resize_frame(true, maxRect.x + maxRect.width/2, maxRect.y, maxRect.width/2, maxRect.height/2));
 }
 
-var KeypadTillingWindowSwitcherPopup = class KeypadTillingWindowSwitcherPopup extends AltTab.WindowSwitcherPopup {
+var KeypadTilingWindowSwitcherPopup = class KeypadTilingWindowSwitcherPopup extends AltTab.WindowSwitcherPopup {
     _init(firstWindow, firstCallback, secondCallback) {
+        this._increment = 0;
         this._saveWindow(firstWindow);
-        addTimeout(2, () => firstCallback(firstWindow));
+        addTimeout(this._increment, () => firstCallback(firstWindow));
+        this._increment = this._increment + 2;
         
         this._firstWindow = firstWindow;
         this._callback = secondCallback;
@@ -371,8 +384,10 @@ var KeypadTillingWindowSwitcherPopup = class KeypadTillingWindowSwitcherPopup ex
         let windows = AltTab.getWindows(workspace).filter(window => window != this._firstWindow && window.resizeable);
         
         windows.forEach(window => {
-            addTimeout(1, () => this._saveWindow(window));
-            addTimeout(3, () => this._callback(window));
+            window.move_then_resize_frame = move_then_resize_frame.bind(window);
+            addTimeout(this._increment, () => this._saveWindow(window));
+            addTimeout(this._increment, () => this._callback(window));
+            this._increment = this._increment + 2;
         });
         
         return windows;
@@ -404,7 +419,7 @@ var KeypadTillingWindowSwitcherPopup = class KeypadTillingWindowSwitcherPopup ex
         window.unmaximize(Meta.MaximizeFlags.BOTH);
         
         addTimeout(1, () => {
-            window.move_resize_frame(true, window.rectOld.x, window.rectOld.y, window.rectOld.width, window.rectOld.height);
+            window.move_then_resize_frame(true, window.rectOld.x, window.rectOld.y, window.rectOld.width, window.rectOld.height);
             delete window.rectOld;
         });
         
@@ -419,8 +434,11 @@ var KeypadTillingWindowSwitcherPopup = class KeypadTillingWindowSwitcherPopup ex
     
     _saveWindow(window) {
         let maximizedFlag = (window.maximized_horizontally | 0) | 2*(window.maximized_vertically | 0);
-        if (maximizedFlag)
+        if (maximizedFlag) {
             window.unmaximize(maximizedFlag);
+            this._increment ++;
+        }
+        
         window.maximizedFlagOld = maximizedFlag;
         window.rectOld = window.get_frame_rect();
     }
@@ -457,6 +475,6 @@ var KeypadTillingWindowSwitcherPopup = class KeypadTillingWindowSwitcherPopup ex
 
 // GS 3.32+
 if (AltTab.WindowSwitcherPopup.prototype instanceof GObject.Object)
-    KeypadTillingWindowSwitcherPopup = GObject.registerClass(KeypadTillingWindowSwitcherPopup);
+    KeypadTilingWindowSwitcherPopup = GObject.registerClass(KeypadTilingWindowSwitcherPopup);
 
 
