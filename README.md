@@ -21,6 +21,6 @@ Tile windows with your keypad.
 ## Details :
 
 * Bad fluidity and some bugs on Wayland, in particular with window completion (annoying display delays).
-* Tiling is not exactly the same as the one that GNOME Shell provides. For instance left and right tiling are more basic while corner tiling gains resizing.
+* Tiling is not exactly the same as the one that GNOME Shell provides. For instance left and right tiling are more basic while top, bottom and corner tiling gains resizing.
 * Default keybindings could conflict with those of other extensions like popular *Dash to Dock* and *Dash to Panel* (see either *Keypad Tiling* or *other extension* preferences).
 
