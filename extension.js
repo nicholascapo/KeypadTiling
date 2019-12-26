@@ -68,6 +68,8 @@ function init() {
 
 function enable() {
     isWaylandCompositor = Meta.is_wayland_compositor();
+    Meta.Window.prototype.move_then_resize_frame = move_then_resize_frame;
+    
     settings = Convenience.getSettings();
     interfaceSettings = Convenience.getSettings('org.gnome.desktop.interface');
     
@@ -88,13 +90,14 @@ function disable() {
     
     settings = undefined;
     interfaceSettings = undefined;
+    
+    delete Meta.Window.prototype.move_then_resize_frame;
 }
 
 function kp(kpFunction) {
     let window = global.display.focus_window;
     if (window && window.resizeable) {
         disableAnimations();
-        window.move_then_resize_frame = move_then_resize_frame.bind(window);
         kpFunction(window);
         addTimeout(3, () => enableAnimations());
     }
@@ -106,7 +109,6 @@ function popupKp(firstKpFunction, secondKpFunction) {
         return;
     
     disableAnimations();
-    window.move_then_resize_frame = move_then_resize_frame.bind(window);
     
     let workspace = global.workspace_manager ? global.workspace_manager.get_active_workspace() : global.screen.get_active_workspace();
     let otherWindows = AltTab.getWindows(workspace).filter(w => w != window && w.resizeable);
@@ -384,7 +386,6 @@ var KeypadTilingWindowSwitcherPopup = class KeypadTilingWindowSwitcherPopup exte
         let windows = AltTab.getWindows(workspace).filter(window => window != this._firstWindow && window.resizeable);
         
         windows.forEach(window => {
-            window.move_then_resize_frame = move_then_resize_frame.bind(window);
             addTimeout(this._increment, () => this._saveWindow(window));
             addTimeout(this._increment, () => this._callback(window));
             this._increment = this._increment + 2;
