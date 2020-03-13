@@ -12,8 +12,9 @@ Tile windows with your keypad.
 
 1. Download and decompress or clone the repository
 2. Place the resulting directory in `~/.local/share/gnome-shell/extensions`
-3. IMPORTANT: change the directory name to `keypadTiling@abakkk.framagit.org`
-4. A small shot of `Alt + F2` `r` to restart gnome-shell under Xorg, restart or relogin under Wayland
+3. **Change the directory name** to `keypadTiling@abakkk.framagit.org`
+4. Xorg: type `alt + F2` and `r` to restart gnome-shell  
+   Wayland: restart or re-login
 5. Enable the extension in gnome-tweaks
 6. `Super + keypad key` or `Super + Alt + keypad key` to test
 7. [https://framagit.org/abakkk/KeypadTiling/issues](https://framagit.org/abakkk/KeypadTiling/issues) to say it doesn't work
