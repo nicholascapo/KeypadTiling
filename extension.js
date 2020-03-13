@@ -28,11 +28,14 @@ const Meta = imports.gi.Meta;
 const Shell = imports.gi.Shell;
 
 const AltTab = imports.ui.altTab;
+const Config = imports.misc.config;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Main = imports.ui.main;
 const SwitcherPopup = imports.ui.switcherPopup;
 
 const Convenience = ExtensionUtils.getSettings ? ExtensionUtils : ExtensionUtils.getCurrentExtension().imports.convenience;
+
+const GS_VERSION = Config.PACKAGE_VERSION;
 
 // information: Meta.MaximizeFlags = { HORIZONTAL: 1, VERTICAL: 2, BOTH: 3 }
 
@@ -366,7 +369,41 @@ function _kp9(window) {
     addTimeout(i, () => window.move_then_resize_frame(true, maxRect.x + maxRect.width/2, maxRect.y, maxRect.width/2, maxRect.height/2));
 }
 
-var KeypadTilingWindowSwitcherPopup = class KeypadTilingWindowSwitcherPopup extends AltTab.WindowSwitcherPopup {
+
+var WindowSwitcherPopupWrapper = GS_VERSION < '3.36.0' ?
+class WindowSwitcherPopupWrapper extends AltTab.WindowSwitcherPopup { // GS 3.34-
+    _keyPressEvent(actor, event) {
+        let keysym = event.get_key_symbol();
+        if (keysym == 65293 || keysym == 65421) {
+            this._isActivated = true;
+            if (this.fadeAndDestroy) // GS 3.32+
+                this.fadeAndDestroy();
+            else
+                this.destroy();
+            return true; // Clutter.EVENT_STOP
+        }
+        
+        return super._keyPressEvent(actor, event);
+    }
+} :
+class WindowSwitcherPopupWrapper extends AltTab.WindowSwitcherPopup { // GS 3.36+
+    vfunc_key_press_event(keyEvent) {
+        let keysym = keyEvent.keyval;
+        if (keysym == 65293 || keysym == 65421) {
+            this._isActivated = true;
+            this.fadeAndDestroy();
+            return true; // Clutter.EVENT_STOP
+        }
+        
+        return super.vfunc_key_press_event(keyEvent);
+    }
+};
+
+// GS 3.32+
+if (AltTab.WindowSwitcherPopup.prototype instanceof GObject.Object)
+    WindowSwitcherPopupWrapper = GObject.registerClass(WindowSwitcherPopupWrapper);
+
+var KeypadTilingWindowSwitcherPopup = class KeypadTilingWindowSwitcherPopup extends WindowSwitcherPopupWrapper {
     _init(firstWindow, firstCallback, secondCallback) {
         this._increment = 0;
         this._saveWindow(firstWindow);
@@ -397,20 +434,6 @@ var KeypadTilingWindowSwitcherPopup = class KeypadTilingWindowSwitcherPopup exte
     _itemActivated(switcher, n) {
         this._isActivated = true;
         super._itemActivated(switcher, n);
-    }
-    
-    _keyPressEvent(actor, event) {
-        let keysym = event.get_key_symbol();
-        if (keysym == 65293 || keysym == 65421) {
-            this._isActivated = true;
-            if (this.fadeAndDestroy) // GS 3.32+
-                this.fadeAndDestroy();
-            else
-                this.destroy();
-            return true; // Clutter.EVENT_STOP
-        }
-        
-        return super._keyPressEvent(actor, event);
     }
     
     _restoreWindow(window) {
@@ -475,7 +498,7 @@ var KeypadTilingWindowSwitcherPopup = class KeypadTilingWindowSwitcherPopup exte
 };
 
 // GS 3.32+
-if (AltTab.WindowSwitcherPopup.prototype instanceof GObject.Object)
+if (WindowSwitcherPopupWrapper.prototype instanceof GObject.Object)
     KeypadTilingWindowSwitcherPopup = GObject.registerClass(KeypadTilingWindowSwitcherPopup);
 
 
