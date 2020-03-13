@@ -15,7 +15,7 @@ Tile windows with your keypad.
 3. **Change the directory name** to `keypadTiling@abakkk.framagit.org`
 4. Xorg: type `alt + F2` and `r` to restart gnome-shell  
    Wayland: restart or re-login
-5. Enable the extension in gnome-tweaks
+5. Enable the extension in gnome-tweaks or gnome-shell-extension-prefs
 6. `Super + keypad key` or `Super + Alt + keypad key` to test
 7. [https://framagit.org/abakkk/KeypadTiling/issues](https://framagit.org/abakkk/KeypadTiling/issues) to say it doesn't work
 
