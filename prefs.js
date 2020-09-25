@@ -36,6 +36,11 @@ const _ = imports.gettext.domain(Me.metadata["gettext-domain"]).gettext;
 const _GSDS = imports.gettext.domain('gsettings-desktop-schemas').gettext;
 const _GTK = imports.gettext.domain('gtk30').gettext;
 
+// GTypeName is not sanitized in GS 3.28-
+const sanitizeGType = function(name) {
+    return `Gjs_${name.replace(/@/gi, '_at_').replace(/[^a-z0-9+_-]/gi, '_')}`;
+}
+
 const MARGIN = 10;
 
 var TILING_KEYBINDINGS = {
@@ -83,8 +88,8 @@ function buildPrefsWidget() {
 }
 
 var TopStack = new GObject.Class({
-    Name: 'KeypadTilingTopStack',
-    GTypeName: 'KeypadTilingTopStack',
+    Name: Me.uuid + '.TopStack',
+    GTypeName: sanitizeGType(Me.uuid + '-TopStack'),
     Extends: Gtk.Stack,
     
     _init: function(params) {
@@ -97,8 +102,8 @@ var TopStack = new GObject.Class({
 });
 
 var AboutPage = new GObject.Class({
-    Name: 'KeypadTilingAboutPage',
-    GTypeName: 'KeypadTilingAboutPage',
+    Name: Me.uuid + '.AboutPage',
+    GTypeName: sanitizeGType(Me.uuid + '-AboutPage'),
     Extends: Gtk.ScrolledWindow,
 
     _init: function(params) {
@@ -144,8 +149,8 @@ var AboutPage = new GObject.Class({
 });
 
 var PrefsPage = new GObject.Class({
-    Name: 'KeypadTilingPrefsPage',
-    GTypeName: 'KeypadTilingPrefsPage',
+    Name: Me.uuid + '.PrefsPage',
+    GTypeName: sanitizeGType(Me.uuid + '-PrefsPage'),
     Extends: Gtk.ScrolledWindow,
 
     _init: function(params) {
@@ -216,8 +221,8 @@ var PrefsPage = new GObject.Class({
 
 // this code comes from Sticky Notes View by Sam Bull, https://extensions.gnome.org/extension/568/notes/
 var KeybindingsWidget = new GObject.Class({
-    Name: 'KeypadTilingKeybindings.Widget',
-    GTypeName: 'KeypadTilingKeybindingsWidget',
+    Name: Me.uuid + '.KeybindingsWidget',
+    GTypeName: sanitizeGType(Me.uuid + '-KeybindingsWidget'),
     Extends: Gtk.Box,
 
     _init: function(keybindings, settings) {
