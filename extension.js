@@ -155,6 +155,13 @@ function move_then_resize_frame(userOp, x, y , width, height) {
         this.move_frame(userOp, x, y);
     
     this.move_resize_frame(userOp, x, y, width, height);
+    
+    // Workaround for GNOME Terminal 3.38+
+    let newRect = this.get_frame_rect();
+    let extraWidth = width - newRect.width >= 1 ? 1 : 0;
+    let extraHeight = height - newRect.height >= 1 ? 1 : 0;
+    if (extraWidth || extraHeight)
+        this.move_resize_frame(userOp, x, y, width + extraWidth, height + extraHeight);
 }
 
 function addTimeout(i, callback) {
