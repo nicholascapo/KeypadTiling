@@ -22,51 +22,46 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
+const GLib = imports.gi.GLib;
 const GObject = imports.gi.GObject;
 const Gtk = imports.gi.Gtk;
-const Lang = imports.lang;
-const Mainloop = imports.mainloop;
+const IS_GTK3 = Gtk.get_major_version() == 3;
 
 const ExtensionUtils = imports.misc.extensionUtils;
-
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = ExtensionUtils.getSettings && ExtensionUtils.initTranslations ? ExtensionUtils : Me.imports.convenience;
 const Metadata = Me.metadata;
 const _ = imports.gettext.domain(Me.metadata["gettext-domain"]).gettext;
 const _GSDS = imports.gettext.domain('gsettings-desktop-schemas').gettext;
-const _GTK = imports.gettext.domain('gtk30').gettext;
-
-// GTypeName is not sanitized in GS 3.28-
-const sanitizeGType = function(name) {
-    return `Gjs_${name.replace(/@/gi, '_at_').replace(/[^a-z0-9+_-]/gi, '_')}`;
-}
+const _GTK = imports.gettext.domain(IS_GTK3 ? 'gtk30' : 'gtk40').gettext;
 
 const MARGIN = 10;
+// GTypeName is not sanitized in GS 3.28-
+const UUID = Me.uuid.replace(/@/gi, '_at_').replace(/[^a-z0-9+_-]/gi, '_');
 
-var TILING_KEYBINDINGS = {
-    'kpdivide': "Maximize window",
-    'kp0': "Minimize window",
-    'kp1': "Move window to bottom left corner",
-    'kp2': "Move window to bottom edge of screen",
-    'kp3': "Move window to bottom right corner",
-    'kp4': "Move window to left side of screen",
-    'kp5': "Toggle maximization state",
-    'kp6': "Move window to right side of screen",
-    'kp7': "Move window to top left corner",
-    'kp8': "Move window to top edge of screen",
-    'kp9': "Move window to top right corner"
+if (IS_GTK3) {
+    Gtk.Container.prototype.append = Gtk.Container.prototype.add;
+    Gtk.Bin.prototype.set_child = Gtk.Container.prototype.add;
+}
+
+const getChildrenOf = function(widget) {
+    if (IS_GTK3) {
+        return widget.get_children();
+    } else {
+        let listModel = widget.observe_children();
+        let i = 0;
+        let children = [];
+        let child;
+        while (!!(child = listModel.get_item(i))) {
+            children.push(child);
+            i++;
+        }
+        return children;
+    }
 };
 
-var COMPLETION_KEYBINDINGS = {
-    'popup-kp1': "Move window to bottom left corner",
-    'popup-kp2': "Move window to bottom edge of screen",
-    'popup-kp3': "Move window to bottom right corner",
-    'popup-kp4': "Move window to left side of screen",
-    'popup-kp6': "Move window to right side of screen",
-    'popup-kp7': "Move window to top left corner",
-    'popup-kp8': "Move window to top edge of screen",
-    'popup-kp9': "Move window to top right corner"
-};
+var TILING_KEYBINDINGS = ['kpdivide', 'kp0', 'kp1', 'kp2', 'kp3', 'kp4', 'kp5', 'kp6', 'kp7', 'kp8', 'kp9'];
+var COMPLETION_KEYBINDINGS = ['popup-kp1', 'popup-kp2', 'popup-kp3', 'popup-kp4', 'popup-kp6', 'popup-kp7', 'popup-kp8', 'popup-kp9'];
 
 function init() {
     Convenience.initTranslations();
@@ -74,26 +69,29 @@ function init() {
 
 function buildPrefsWidget() {
     let topStack = new TopStack();
-    let switcher = new Gtk.StackSwitcher({halign: Gtk.Align.CENTER, visible: true, stack: topStack});
-    Mainloop.timeout_add(0, () => {
-        let window = topStack.get_toplevel();
-        window.resize(720,500);
-        let headerBar = window.get_titlebar();
-        headerBar.custom_title = switcher;
-        return false;
+    let switcher = new Gtk.StackSwitcher({ halign: Gtk.Align.CENTER, visible: true, stack: topStack });
+    
+    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+        if (IS_GTK3)
+            topStack.get_toplevel().get_titlebar().set_custom_title(switcher);
+        else
+            topStack.get_root().get_titlebar().set_title_widget(switcher);
+        
+        return GLib.SOURCE_REMOVE;
     });
     
-    topStack.show_all();
+    if (IS_GTK3)
+        topStack.show_all();
     return topStack;
 }
 
 var TopStack = new GObject.Class({
-    Name: Me.uuid + '.TopStack',
-    GTypeName: sanitizeGType(Me.uuid + '-TopStack'),
+    Name: `${UUID}-TopStack`,
     Extends: Gtk.Stack,
     
     _init: function(params) {
-        this.parent({ transition_type: 1, transition_duration: 500, expand: true });
+        this.parent({ transition_type: Gtk.StackTransitionType.CROSSFADE, transition_duration: 500, hexpand: true, vexpand: true });
+        
         this.prefsPage = new PrefsPage();
         this.add_titled(this.prefsPage, 'prefs', _("Preferences"));
         this.aboutPage = new AboutPage();
@@ -102,15 +100,14 @@ var TopStack = new GObject.Class({
 });
 
 var AboutPage = new GObject.Class({
-    Name: Me.uuid + '.AboutPage',
-    GTypeName: sanitizeGType(Me.uuid + '-AboutPage'),
+    Name: `${UUID}-AboutPage`,
     Extends: Gtk.ScrolledWindow,
 
     _init: function(params) {
         this.parent();
 
-        let vbox= new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, margin: MARGIN*3 });
-        this.add(vbox);
+        let vbox= new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, margin_top: 3 * MARGIN, margin_bottom: 3 * MARGIN, margin_start: 3 * MARGIN, margin_end: 3 * MARGIN });
+        this.set_child(vbox);
         
         let name = "<b> " + _(Metadata.name) + "</b>";
         let version = _("Version %d").format(Metadata.version);
@@ -120,37 +117,36 @@ var AboutPage = new GObject.Class({
         let licenceLink = "https://www.gnu.org/licenses/old-licenses/gpl-2.0.html";
         let licence = "<small>" + _GTK("This program comes with absolutely no warranty.\nSee the <a href=\"%s\">%s</a> for details.").format(licenceLink, licenceName) + "</small>";
         
-        let aboutLabel = new Gtk.Label({ wrap: true, justify: 2, use_markup: true, label:
+        let aboutLabel = new Gtk.Label({ wrap: true, justify: Gtk.Justification.CENTER, use_markup: true, label:
             name + "\n\n" + version + "\n\n" + description + "\n\n" + link + "\n\n" + licence + "\n" });
         
-        vbox.add(aboutLabel);
+        vbox.append(aboutLabel);
         
-        let creditBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, margin: 2*MARGIN });
-        let leftBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL });
-        let rightBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL });
-        let leftLabel = new Gtk.Label({ wrap: true, valign: 1, halign: 2, justify: 1, use_markup: true, label: "<small>" + _GTK("Created by") + "</small>" });
-        let rightLabel = new Gtk.Label({ wrap: true, valign: 1, halign: 1, justify: 0, use_markup: true, label: "<small><a href=\"https://framagit.org/abakkk\">Abakkk</a></small>" });
-        leftBox.pack_start(leftLabel, false, false, 0);
-        rightBox.pack_start(rightLabel, false, false, 0);
-        creditBox.pack_start(leftBox, true, true, 5);
-        creditBox.pack_start(rightBox, true, true, 5);
-        vbox.add(creditBox);
+        let creditBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, margin_top: 2 * MARGIN, margin_bottom: 2 * MARGIN, margin_start: 2 * MARGIN, margin_end: 2 * MARGIN, spacing: 5 });
+        let leftBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, hexpand: true });
+        let rightBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, hexpand: true });
+        leftBox.append(new Gtk.Label({ wrap: true, valign: Gtk.Align.START, halign: Gtk.Align.END, justify: Gtk.Justification.RIGHT,
+                                       use_markup: true, label: "<small>" + _GTK("Created by") + "</small>" }));
+        rightBox.append(new Gtk.Label({ wrap: true, valign: Gtk.Align.START, halign: Gtk.Align.START, justify: Gtk.Justification.LEFT,
+                                        use_markup: true, label: "<small><a href=\"https://framagit.org/abakkk\">Abakkk</a></small>" }));
+        creditBox.append(leftBox);
+        creditBox.append(rightBox);
+        vbox.append(creditBox);
         
         if (_("translator-credits") != "translator-credits" && _("translator-credits") != "") {
-            leftBox.pack_start(new Gtk.Label(), false, false, 0);
-            rightBox.pack_start(new Gtk.Label(), false, false, 0);
-            leftLabel = new Gtk.Label({ wrap: true, valign: 1, halign: 2, justify: 1, use_markup: true, label: "<small>" + _GTK("Translated by") + "</small>" });
-            rightLabel = new Gtk.Label({ wrap: true, valign: 1, halign: 1, justify: 0, use_markup: true, label: "<small>" + _("translator-credits") + "</small>" });
-            leftBox.pack_start(leftLabel, false, false, 0);
-            rightBox.pack_start(rightLabel, false, false, 0);
+            leftBox.append(new Gtk.Label());
+            rightBox.append(new Gtk.Label());
+            leftBox.append(new Gtk.Label({ wrap: true, valign: Gtk.Align.START, halign: Gtk.Align.END, justify: Gtk.Justification.RIGHT,
+                                           use_markup: true, label: "<small>" + _GTK("Translated by") + "</small>" }));
+            rightBox.append(new Gtk.Label({ wrap: true, valign: Gtk.Align.START, halign: Gtk.Align.START, justify: Gtk.Justification.LEFT,
+                                            use_markup: true, label: "<small>" + _("translator-credits") + "</small>" }));
         }
     }
     
 });
 
 var PrefsPage = new GObject.Class({
-    Name: Me.uuid + '.PrefsPage',
-    GTypeName: sanitizeGType(Me.uuid + '-PrefsPage'),
+    Name: `${UUID}-PrefsPage`,
     Extends: Gtk.ScrolledWindow,
 
     _init: function(params) {
@@ -158,78 +154,64 @@ var PrefsPage = new GObject.Class({
 
         this.settings = Convenience.getSettings();
         
-        let box = new Gtk.Box({orientation: Gtk.Orientation.VERTICAL, margin: MARGIN*3 });
-        this.add(box);
+        let box = new Gtk.Box({orientation: Gtk.Orientation.VERTICAL, margin_top: 3 * MARGIN, margin_bottom: 3 * MARGIN, margin_start: 3 * MARGIN, margin_end: 3 * MARGIN });
+        this.set_child(box);
         
         let listBox = new Gtk.ListBox({ selection_mode: 0, hexpand: true });
-        box.add(listBox);
+        box.append(listBox);
         
-        let styleContext = listBox.get_style_context();
-        styleContext.add_class('background');
+        listBox.get_style_context().add_class('background');
         
-        let animationsBox = new Gtk.Box({ margin: MARGIN });
-        let animationsLabel = new Gtk.Label({label: _("Disable animations during tiling")});
-        animationsLabel.set_halign(1);
-        let animationsSwitch = new Gtk.Switch({valign: 3});
+        let animationsBox = new Gtk.Box({ margin_top: MARGIN, margin_bottom: MARGIN, margin_start: MARGIN, margin_end: MARGIN, spacing: 4 });
+        let animationsLabel = new Gtk.Label({ label: _("Disable animations during tiling"), halign: Gtk.Align.START, hexpand: true });
+        let animationsSwitch = new Gtk.Switch({ valign: Gtk.Align.CENTER });
         this.settings.bind("disable-animations", animationsSwitch, "active", 0);
-        animationsBox.pack_start(animationsLabel, true, true, 4);
-        animationsBox.pack_start(animationsSwitch, false, false, 4);
-        listBox.add(animationsBox);
+        animationsBox.append(animationsLabel);
+        animationsBox.append(animationsSwitch);
+        listBox.append(animationsBox);
         
-        let centerBox = new Gtk.Box({ margin: MARGIN });
-        let centerLabel = new Gtk.Label({label: _("Move window to center of screen when unmaximizing")});
-        centerLabel.set_halign(1);
-        let centerSwitch = new Gtk.Switch({valign: 3});
+        let centerBox = new Gtk.Box({ margin_top: MARGIN, margin_bottom: MARGIN, margin_start: MARGIN, margin_end: MARGIN, spacing: 4 });
+        let centerLabel = new Gtk.Label({ label: _("Move window to center of screen when unmaximizing"), halign: Gtk.Align.START, hexpand: true });
+        let centerSwitch = new Gtk.Switch({ valign: Gtk.Align.CENTER });
         this.settings.bind("center-when-unmaximizing", centerSwitch, "active", 0);
-        centerBox.pack_start(centerLabel, true, true, 4);
-        centerBox.pack_start(centerSwitch, false, false, 4);
-        listBox.add(centerBox);
+        centerBox.append(centerLabel);
+        centerBox.append(centerSwitch);
+        listBox.append(centerBox);
         
-        let tilingTitleBox = new Gtk.Box({ margin_left: MARGIN, margin_right: MARGIN, margin_top: MARGIN, margin_bottom: MARGIN/2 });
-        let tilingTitleLabel = new Gtk.Label({ use_markup: true, label: "<b>" + _("Tiling") + " :</b>" });
-        tilingTitleLabel.set_halign(1);
-        tilingTitleBox.pack_start(tilingTitleLabel, true, true, 4);
-        listBox.add(tilingTitleBox);
+        let tilingTitleBox = new Gtk.Box({ margin_top: MARGIN, margin_bottom: MARGIN / 2, margin_start: MARGIN, margin_end: MARGIN, spacing: 4 });
+        let tilingTitleLabel = new Gtk.Label({ use_markup: true, label: "<b>" + _("Tiling") + " :</b>", halign: Gtk.Align.START, hexpand: true });
+        tilingTitleBox.append(tilingTitleLabel);
+        listBox.append(tilingTitleBox);
         
         let tilingKeybindingsWidget = new KeybindingsWidget(TILING_KEYBINDINGS, this.settings);
-        tilingKeybindingsWidget.margin = MARGIN;
-        listBox.add(tilingKeybindingsWidget);
+        listBox.append(tilingKeybindingsWidget);
         
-        let completionTitleBox = new Gtk.Box({ margin_left: MARGIN, margin_right: MARGIN, margin_top: MARGIN, margin_bottom: MARGIN/2 });
-        let completionTitleLabel = new Gtk.Label({ use_markup: true, label: "<b>" + _("Tiling with window completion") + " :</b>" });
-        completionTitleLabel.set_halign(1);
-        completionTitleBox.pack_start(completionTitleLabel, true, true, 4);
-        listBox.add(completionTitleBox);
+        let completionTitleBox = new Gtk.Box({ margin_top: MARGIN, margin_bottom: MARGIN / 2, margin_start: MARGIN, margin_end: MARGIN, spacing: 4 });
+        let completionTitleLabel = new Gtk.Label({ use_markup: true, label: "<b>" + _("Tiling with window completion") + " :</b>", halign: Gtk.Align.START, hexpand: true });
+        completionTitleBox.append(completionTitleLabel);
+        listBox.append(completionTitleBox);
         
         let internalKeybindingsWidget = new KeybindingsWidget(COMPLETION_KEYBINDINGS, this.settings);
-        internalKeybindingsWidget.margin = MARGIN;
-        listBox.add(internalKeybindingsWidget);
+        listBox.append(internalKeybindingsWidget);
         
-        let children = listBox.get_children();
+        let children = getChildrenOf(listBox);
         for (let i = 0; i < children.length; i++) {
             if (children[i].activatable)
                 children[i].set_activatable(false);
         }
-    },
-    
-    addSeparator: function(container) {
-        let separatorRow = new Gtk.ListBoxRow({sensitive: false});
-        separatorRow.add(new Gtk.Separator({ margin: MARGIN }));
-        container.add(separatorRow);
     }
 });
 
-// this code comes from Sticky Notes View by Sam Bull, https://extensions.gnome.org/extension/568/notes/
-var KeybindingsWidget = new GObject.Class({
-    Name: Me.uuid + '.KeybindingsWidget',
-    GTypeName: sanitizeGType(Me.uuid + '-KeybindingsWidget'),
+// From Sticky Notes View by Sam Bull, https://extensions.gnome.org/extension/568/notes/
+const KeybindingsWidget = new GObject.Class({
+    Name: `${UUID}-KeybindingsWidget`,
     Extends: Gtk.Box,
 
-    _init: function(keybindings, settings) {
-        this.parent();
+    _init: function(settingKeys, settings) {
+        this.parent({ margin_top: MARGIN, margin_bottom: MARGIN, margin_start: MARGIN, margin_end: MARGIN });
         this.set_orientation(Gtk.Orientation.VERTICAL);
 
-        this._keybindings = keybindings;
+        this._settingKeys = settingKeys;
         this._settings = settings;
 
         this._columns = {
@@ -269,26 +251,24 @@ var KeybindingsWidget = new GObject.Class({
             accel_mode: Gtk.CellRendererAccelMode.GTK,
             xalign: 1
         });
-        keybinding_renderer.connect('accel-edited',
-            Lang.bind(this, function(renderer, iter, key, mods) {
-                let value = Gtk.accelerator_name(key, mods);
-                let [success, iterator ] =
-                    this._store.get_iter_from_string(iter);
+        keybinding_renderer.connect('accel-edited', (renderer, iter, key, mods) => {
+            let value = Gtk.accelerator_name(key, mods);
+            let [success, iterator ] =
+                this._store.get_iter_from_string(iter);
 
-                if(!success) {
-                    printerr("Can't change keybinding");
-                }
+            if (!success) {
+                printerr("Can't change keybinding");
+            }
 
-                let name = this._store.get_value(iterator, 0);
+            let name = this._store.get_value(iterator, 0);
 
-                this._store.set(
-                    iterator,
-                    [this._columns.MODS, this._columns.KEY],
-                    [mods, key]
-                );
-                this._settings.set_strv(name, [value]);
-            })
-        );
+            this._store.set(
+                iterator,
+                [this._columns.MODS, this._columns.KEY],
+                [mods, key]
+            );
+            this._settings.set_strv(name, [value]);
+        });
 
         let keybinding_column = new Gtk.TreeViewColumn({
             title: "",
@@ -308,22 +288,34 @@ var KeybindingsWidget = new GObject.Class({
         this._tree_view.columns_autosize();
         this._tree_view.set_headers_visible(false);
 
-        this.add(this._tree_view);
+        this.append(this._tree_view);
         this.keybinding_column = keybinding_column;
         this.action_column = action_column;
 
+        this._settings.connect('changed', this._onSettingsChanged.bind(this));
         this._refresh();
+    },
+    
+    // Support the case where all the settings has been reset.
+    _onSettingsChanged: function() {
+        if (this._refreshTimeout)
+            GLib.source_remove(this._refreshTimeout);
+        
+        this._refreshTimeout = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._refreshTimeout = 0;
+            this._refresh();
+        });
     },
 
     _refresh: function() {
         this._store.clear();
 
-        for(let settings_key in this._keybindings) {
-            if (settings_key.indexOf('-separator-') != -1)
-                continue;
-            let [key, mods] = Gtk.accelerator_parse(
-                this._settings.get_strv(settings_key)[0]
-            );
+        this._settingKeys.forEach(settingKey => {
+            let success_, key, mods;
+            if (IS_GTK3)
+                [key, mods] = Gtk.accelerator_parse(this._settings.get_strv(settingKey)[0] || '');
+            else
+                [success_, key, mods] = Gtk.accelerator_parse(this._settings.get_strv(settingKey)[0] || '');
 
             let iter = this._store.append();
             this._store.set(iter,
@@ -334,12 +326,12 @@ var KeybindingsWidget = new GObject.Class({
                     this._columns.KEY
                 ],
                 [
-                    settings_key,
-                    _GSDS(this._keybindings[settings_key]),
+                    settingKey,
+                    _GSDS(this._settings.settings_schema.get_key(settingKey).get_summary()),
                     mods,
                     key
                 ]
             );
-        }
+        });
     }
 });
