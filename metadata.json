@@ -1,8 +1,8 @@
 {
   "name": "Keypad Tiling",
-  "description": "Tile windows with your keypad",
-  "uuid": "keypadTiling@abakkk.framagit.org",
-  "url": "https://framagit.org/abakkk/KeypadTiling",
+  "description": "Tile windows with your keypad.",
+  "uuid": "keypad-tiling@som.codeberg.org",
+  "url": "https://codeberg.org/som/KeypadTiling",
   "settings-schema": "org.gnome.shell.extensions.keypad-tiling",
   "gettext-domain": "keypad-tiling",
   "shell-version": [
