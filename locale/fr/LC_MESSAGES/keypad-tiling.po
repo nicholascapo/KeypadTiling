@@ -1,4 +1,4 @@
-# <language> translations for Draw On Your Screen.
+# <language> translations for Keypad Tiling.
 # Copyright (C) 2019 Listed translators
 #
 # This file is distributed under the same license as Keypad Tiling.

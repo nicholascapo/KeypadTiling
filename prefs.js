@@ -1,14 +1,9 @@
-/* jslint esversion: 6 */
-
 /*
  * Copyright 2019 Abakkk
  *
- * This file is part of Keypad Tiling, a tiling extension for GNOME Shell.
- * https://framagit.org/abakkk/KeypadTiling
- *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
+ * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -19,8 +14,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * SPDX-License-Identifier: GPL-2.0-or-later
+ * SPDX-FileCopyrightText: 2019 Abakkk
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
+
+/* jslint esversion: 6 */
 
 const GLib = imports.gi.GLib;
 const GObject = imports.gi.GObject;
@@ -113,12 +111,12 @@ var AboutPage = new GObject.Class({
         let version = _("Version %d").format(Metadata.version);
         let description = _(Metadata.description);
         let link = "<span><a href=\"" + Metadata.url + "\">" + Metadata.url + "</a></span>";
-        let licenceName = _GTK("GNU General Public License, version 2 or later");
-        let licenceLink = "https://www.gnu.org/licenses/old-licenses/gpl-2.0.html";
-        let licence = "<small>" + _GTK("This program comes with absolutely no warranty.\nSee the <a href=\"%s\">%s</a> for details.").format(licenceLink, licenceName) + "</small>";
+        let licenseName = _GTK("GNU General Public License, version 3 or later");
+        let licenseLink = "https://www.gnu.org/licenses/gpl-3.0.html";
+        let license = "<small>" + _GTK("This program comes with absolutely no warranty.\nSee the <a href=\"%s\">%s</a> for details.").format(licenseLink, licenseName) + "</small>";
         
         let aboutLabel = new Gtk.Label({ wrap: true, justify: Gtk.Justification.CENTER, use_markup: true, label:
-            name + "\n\n" + version + "\n\n" + description + "\n\n" + link + "\n\n" + licence + "\n" });
+            name + "\n\n" + version + "\n\n" + description + "\n\n" + link + "\n\n" + license + "\n" });
         
         vbox.append(aboutLabel);
         
